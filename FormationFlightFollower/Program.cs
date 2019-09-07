@@ -30,7 +30,7 @@ namespace IngameScript
         // If the script is causing lag try disabling collision avoidance. This is a CPU intensive process!
         // Don't rely on this feature to save your ships! Remember, it is detecting objects between itself and the where
         // it is supposed to be, not objects in its path. Enabling this will cause your ship to be renamed.
-        const bool enableCollisionAvoidence = false;
+        readonly bool enableCollisionAvoidence = false;
 
         // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended 
         // to set this field to avoid unexpected behavior related to orientation.
@@ -38,12 +38,12 @@ namespace IngameScript
         const string cockpitName = "";
 
         // This allows you to automatically disable the script when the cockpit is in use.
-        const bool autoStop = true;
+        readonly bool autoStop = true;
 
         // When this is true, opon leaving the cockpit, the script will set the offset to the current position instead 
         // of returning to its designated point. Similar to the starthere command.
         // This only applies if autoStop is true.
-        const bool autoStartHere = false;
+        readonly bool autoStartHere = false;
 
         // The maximum speed that the ship can go to correct itself.
         // This is relative to the speed of the leader ship. 
@@ -56,7 +56,7 @@ namespace IngameScript
         // Update10 : Runs the script every 10th tick
         // Update100 : Runs the script every 100th tick
         // If you get odd or unexpected behavior, try setting calculateMissingTicks to true.
-        const UpdateFrequency tickSpeed = UpdateFrequency.Update1;
+        readonly UpdateFrequency tickSpeed = UpdateFrequency.Update1;
 
         // When the tick speed of the leader is lower than the tick speed of the follower, this workaround can can be activated.
         // When this is enabled, the script will "guess" what the leader position should be in missing ticks. If the leader gets 
@@ -594,7 +594,6 @@ namespace IngameScript
             }
             return raycasted;
         }
-#pragma warning restore CS0162 // Unreachable code detected
 
 
     }

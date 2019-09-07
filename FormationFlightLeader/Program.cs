@@ -32,7 +32,7 @@ namespace IngameScript
         // Update10 : Runs the script every 10th tick
         // Update100 : Runs the script every 100th tick
         // Note due to limitations, the script will only run every 10th tick max when not using itself.
-        const UpdateFrequency tickSpeed = UpdateFrequency.Update1;
+        readonly UpdateFrequency tickSpeed = UpdateFrequency.Update1;
 
         // The name of the sensor group that the script will use to keep track of the leader ship. 
         // Leave blank to use all connected sensors.
@@ -48,18 +48,18 @@ namespace IngameScript
 
         // When true, the script will attempt to reconnect to the previous leader on start.
         // This functions in a similar way to the find command if an exact match is not found.
-        const bool attemptReconnection = true;
+        readonly bool attemptReconnection = true;
 
         // When true, the script will broadcast its own location when no other leader is specified.
-        const bool allowFollowSelf = true;
+        readonly bool allowFollowSelf = true;
 
         // When true, the script will use the cameras to try to keep a lock on the designated leader.
         // This is a CPU intensive process.
-        const bool activeRaycasting = false;
+        readonly bool activeRaycasting = false;
 
         // When true, the script will align the followers with gravity.
         // Recomended for rovers.
-        const bool alignFollowersToGravity = false;
+        readonly bool alignFollowersToGravity = false;
         // =====================================
 
         // ============= Commands ==============
@@ -464,7 +464,6 @@ namespace IngameScript
         {
             return Math.Abs(d1 - d2) <= precision;
         }
-#pragma warning restore CS0162 // Unreachable code detected
 
 
     }

@@ -34,12 +34,12 @@ namespace IngameScript
         const string cockpitName = "";
 
         // This allows you to automatically disable the script when the cockpit is in use.
-        const bool autoStop = true;
+        readonly bool autoStop = true;
 
         // When this is true, opon leaving the cockpit, the script will set the offset to the current position instead 
         // of returning to its designated point. Similar to the starthere command.
         // This only applies if autoStop is true.
-        const bool autoStartHere = false;
+        readonly bool autoStartHere = false;
 
         // This is the frequency that the script is running at. If you are experiencing lag
         // because of this script try decreasing this value. Valid values:
@@ -47,12 +47,12 @@ namespace IngameScript
         // Update10 : Runs the script every 10th tick
         // Update100 : Runs the script every 100th tick
         // Note: Changing this value may cause unexpected behavior and will make following less accurate.
-        const UpdateFrequency tickSpeed = UpdateFrequency.Update1;
+        readonly UpdateFrequency tickSpeed = UpdateFrequency.Update1;
 
         // When the tick speed of the leader is lower than the tick speed of the follower, this workaround can can be activated.
         // When this is enabled, the script will "guess" what the leader position should be in missing ticks. If the leader gets 
         // damaged and stops, the follower will keep going as if the leader is still there until you use the stop command.
-        const bool calculateMissingTicks = true;
+        readonly bool calculateMissingTicks = true;
 
         // When calculateMissingTicks is enabled, the maximum number of ticks to estimate before 
         // assuming the leader is no longer active.
@@ -526,7 +526,6 @@ namespace IngameScript
                 return false;
             }
         }
-#pragma warning restore CS0162 // Unreachable code detected
 
 
     }
