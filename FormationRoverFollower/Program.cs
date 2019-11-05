@@ -18,8 +18,9 @@ namespace IngameScript
         // All commands not prefixed by this will be ignored.
         // Any character is allowed except ; [ ] and :
         const string followerSystemId = "System1";
-        const string followerId = "Drone1";
-        
+        string followerId = "Drone1";
+        //string followerId => Me.CubeGrid.CustomName;
+
         // The position that the ship will take relative to the main ship by default
         // In (X, Y, Z)
         // X: +Right -Left
@@ -122,12 +123,12 @@ namespace IngameScript
             rc = GetBlock<IMyShipController>(cockpitName, true);
             if (rc == null) // Second priority cockpit
                 rc = GetBlock<IMyCockpit>();
-            if (rc == null) // Thrid priority remote control
+            if (rc == null) // Third priority remote control
                 rc = GetBlock<IMyRemoteControl>();
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
-            wheels = new WheelControl(rc, tickSpeed, GetBlocks<IMyMotorSuspension>());
+            wheels = new WheelControl(this, rc, tickSpeed, GetBlocks<IMyMotorSuspension>());
 
             leaderListener = IGC.RegisterBroadcastListener(transmitTag);
             leaderListener.SetMessageCallback("");
@@ -232,7 +233,7 @@ namespace IngameScript
                     double.Parse(args [4])
                     );
 
-                // Parse succesful, update the real values.
+                // Parse successful, update the real values.
                 configurations = loadedConfig;
                 currentConfig = loadedCurrentConfig;
                 if (configurations.ContainsKey(currentConfig))
@@ -373,7 +374,7 @@ namespace IngameScript
             if (leaderMatrix == MatrixD.Zero)
                 Echo("No messages received.");
             else if (calculateMissingTicks && runtime - updated > maxMissingScriptTicks)
-                Echo($"Weak signal, message receved {runtime - updated} ticks ago.");
+                Echo($"Weak signal, message received {runtime - updated} ticks ago.");
             if (autoStop && prevControl)
                 Echo("Cockpit is under control.");
         }

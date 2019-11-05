@@ -40,6 +40,7 @@ namespace IngameScript
             IMyShipController rc;
             bool first = true;
             readonly List<Wheel> wheels = new List<Wheel>();
+            Program prg;
 
             struct Wheel
             {
@@ -53,8 +54,9 @@ namespace IngameScript
                 }
             }
 
-            public WheelControl (IMyShipController rc, UpdateFrequency tickSpeed, List<IMyMotorSuspension> wheels)
+            public WheelControl (Program prg, IMyShipController rc, UpdateFrequency tickSpeed, List<IMyMotorSuspension> wheels)
             {
+                this.prg = prg;
                 if (rc == null)
                     throw new Exception("Ship controller null.");
 
@@ -81,8 +83,15 @@ namespace IngameScript
                 Vector3D meToTarget = rc.WorldMatrix.Translation - target;
                 Vector3D localError = Vector3D.TransformNormal(meToTarget, transpose);
 
+
+                prg.Echo(localError.ToString());
+
                 localError.Y = 0;
-                
+                if (localError.X > -0.5 && localError.X < 0.5)
+                    localError.X = 0;
+                if (localError.Z > -0.5 && localError.Z < 0.5)
+                    localError.Z = 0;
+
                 float correction = (float)forwardPID.Control(localError.Z);
                 float force = correction * rc.CalculateShipMass().TotalMass;
 
@@ -143,7 +152,7 @@ namespace IngameScript
                     case "SmallSuspension5x5":
                         return 4800;
                 }
-                throw new Exception("Unkown wheel type.");
+                throw new Exception("Unknown wheel type.");
             }
 
             public void Reset ()
