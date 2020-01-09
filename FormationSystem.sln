@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.779
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29609.76
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FormationFlightFollower", "FormationFlightFollower\FormationFlightFollower.csproj", "{8B17A575-B3C3-46C5-9884-03F38585271B}"
 EndProject
@@ -27,9 +27,7 @@ Global
 		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\GyroControl\GyroControl\GyroControl.projitems*{9e7a19f7-673a-48f8-ace6-07bcb0cfbb8d}*SharedItemsImports = 13
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
-		..\Mixins\GyroControl\GyroControl\GyroControl.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\PID\PID\PID.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
-		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{e8993be6-cf86-4449-bbdd-10f694d59cad}*SharedItemsImports = 13
 		..\Mixins\PID\PID\PID.projitems*{f72c9c5d-fefa-4787-9974-12c127ce1b80}*SharedItemsImports = 13
 	EndGlobalSection

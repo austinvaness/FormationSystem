@@ -18,8 +18,7 @@ namespace IngameScript
         // All commands not prefixed by this will be ignored.
         // Any character is allowed except ; [ ] and :
         const string followerSystemId = "System1";
-        string followerId = "Drone1";
-        //string followerId => Me.CubeGrid.CustomName;
+        const string followerId = "Drone1";
 
         // The position that the ship will take relative to the main ship by default
         // In (X, Y, Z)
@@ -128,7 +127,7 @@ namespace IngameScript
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
-            wheels = new WheelControl(this, rc, tickSpeed, GetBlocks<IMyMotorSuspension>());
+            wheels = new WheelControl(rc, tickSpeed, GetBlocks<IMyMotorSuspension>());
 
             leaderListener = IGC.RegisterBroadcastListener(transmitTag);
             leaderListener.SetMessageCallback("");
@@ -350,7 +349,7 @@ namespace IngameScript
                     }
                 }
             }
-            else if (updateSource != UpdateType.Antenna)
+            else
             {
                 RemoteCommand(argument);
             }

@@ -40,7 +40,6 @@ namespace IngameScript
             IMyShipController rc;
             bool first = true;
             readonly List<Wheel> wheels = new List<Wheel>();
-            Program prg;
 
             struct Wheel
             {
@@ -54,9 +53,8 @@ namespace IngameScript
                 }
             }
 
-            public WheelControl (Program prg, IMyShipController rc, UpdateFrequency tickSpeed, List<IMyMotorSuspension> wheels)
+            public WheelControl (IMyShipController rc, UpdateFrequency tickSpeed, List<IMyMotorSuspension> wheels)
             {
-                this.prg = prg;
                 if (rc == null)
                     throw new Exception("Ship controller null.");
 
@@ -82,9 +80,6 @@ namespace IngameScript
 
                 Vector3D meToTarget = rc.WorldMatrix.Translation - target;
                 Vector3D localError = Vector3D.TransformNormal(meToTarget, transpose);
-
-
-                prg.Echo(localError.ToString());
 
                 localError.Y = 0;
                 if (localError.X > -0.5 && localError.X < 0.5)

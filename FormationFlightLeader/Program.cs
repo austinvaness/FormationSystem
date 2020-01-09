@@ -342,7 +342,7 @@ namespace IngameScript
                     IGC.SendBroadcastMessage<MyTuple<MatrixD, Vector3D, long>>(transmitTag, new MyTuple<MatrixD, Vector3D, long>(matrix, rc.GetShipVelocities().LinearVelocity, Me.CubeGrid.EntityId));
                 }
             }
-            else if (updateSource != UpdateType.Antenna)
+            else
             {
                 ProcessCommand(argument);
             }

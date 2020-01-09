@@ -356,7 +356,7 @@ namespace IngameScript
                     }
                 }
             }
-            else if (updateSource != UpdateType.Antenna)
+            else
             {
                 RemoteCommand(argument);
             }
