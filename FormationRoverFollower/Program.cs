@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System;
-using VRage.Game;
 using VRageMath;
 using VRage;
-using SpaceEngineers.Game.ModAPI.Ingame;
+using System.Collections.Immutable;
 
 namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // Rover Script Version 1.0
+        // Rover Script Version 1.1
         // ============= Settings ==============
         // The id that the ship should listen to.
         // All commands not prefixed by this will be ignored.
@@ -28,10 +27,13 @@ namespace IngameScript
         // Important: Use the command 'reset' to make the follower use this value after it has changed.
         readonly Vector3D defaultOffset = new Vector3D(50, 0, 0);
 
-        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended 
-        // to set this field to avoid unexpected behavior related to orientation.
-        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.
+        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended	
+        // to set this field to avoid unexpected behavior related to orientation.	
+        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.	
         const string cockpitName = "";
+
+        // When true, the script will be able to see blocks that are connected via rotor, connector, etc.
+        const bool useSubgridBlocks = false;
 
         // This allows you to automatically disable the script when the cockpit is in use.
         readonly bool autoStop = true;
@@ -118,12 +120,12 @@ namespace IngameScript
 
         public Program ()
         {
-            // Prioritize the given cockpit name
-            rc = GetBlock<IMyShipController>(cockpitName, true);
-            if (rc == null) // Second priority cockpit
-                rc = GetBlock<IMyCockpit>();
-            if (rc == null) // Third priority remote control
-                rc = GetBlock<IMyRemoteControl>();
+            // Prioritize the given cockpit name	
+            rc = GetBlock<IMyShipController>(cockpitName, useSubgridBlocks);
+            if (rc == null) // Second priority cockpit	
+                rc = GetBlock<IMyCockpit>(useSubgridBlocks);
+            if (rc == null) // Third priority remote control	
+                rc = GetBlock<IMyRemoteControl>(useSubgridBlocks);
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
@@ -134,7 +136,6 @@ namespace IngameScript
             commandListener = IGC.RegisterBroadcastListener(transmitCommandTag);
             commandListener.SetMessageCallback("");
 
-
             configurations ["default"] = defaultOffset;
             offset = defaultOffset;
             LoadStorage();
@@ -143,7 +144,7 @@ namespace IngameScript
                 echoFrequency = 10;
             else if (tickSpeed == UpdateFrequency.Update100)
                 echoFrequency = 1;
-            Echo("Running.");
+            Echo("Ready.");
         }
 
         void ResetMovement ()

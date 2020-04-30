@@ -1,18 +1,6 @@
-﻿using Sandbox.Game.EntityComponents;
-using Sandbox.ModAPI.Ingame;
-using Sandbox.ModAPI.Interfaces;
-using SpaceEngineers.Game.ModAPI.Ingame;
+﻿using Sandbox.ModAPI.Ingame;
 using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Text;
 using System;
-using VRage.Collections;
-using VRage.Game.Components;
-using VRage.Game.ModAPI.Ingame;
-using VRage.Game.ModAPI.Ingame.Utilities;
-using VRage.Game.ObjectBuilders.Definitions;
-using VRage.Game;
 using VRageMath;
 using VRage;
 
@@ -20,7 +8,7 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // Leader Script Version 1.0
+        // Leader Script Version 1.1
         // ============= Settings ==============
         // The id of the system that the followers are listening on.
         // Any character is allowed except ;
@@ -38,13 +26,16 @@ namespace IngameScript
         // Leave blank to use all connected sensors.
         const string sensorGroup = "";
 
-        // The distance that the ship will scan while using the scan command.
+        // The distance that the ship will scan while using the scan command.	
         const double scanDistance = 1000;
 
-        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended 
-        // to set this field to avoid unexpected behavior related to orientation.
-        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.
+        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended	
+        // to set this field to avoid unexpected behavior related to orientation.	
+        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.	
         const string cockpitName = "";
+
+        // When true, the script will be able to see blocks that are connected via rotor, connector, etc.
+        const bool useSubgridBlocks = false;
 
         // When true, the script will attempt to reconnect to the previous leader on start.
         // This functions in a similar way to the find command if an exact match is not found.
@@ -84,9 +75,10 @@ namespace IngameScript
 
         // You can ignore any unreachable code warnings that appear in this script.
 
-        IMyShipController rc;
         const string transmitTag = "FSLeader" + followerSystem;
         const string transmitCommandTag = "FSCommand" + followerSystem;
+
+        IMyShipController rc;
         List<IMySensorBlock> sensors = new List<IMySensorBlock>();
         List<IMyCameraBlock> forwardCameras = new List<IMyCameraBlock>();
         long target = 0;
@@ -104,22 +96,22 @@ namespace IngameScript
         public Program ()
         {
             if (string.IsNullOrWhiteSpace(sensorGroup))
-                sensors = GetBlocks<IMySensorBlock>();
+                sensors = GetBlocks<IMySensorBlock>(useSubgridBlocks);
             else
-                sensors = GetBlocks<IMySensorBlock>(sensorGroup, true);
+                sensors = GetBlocks<IMySensorBlock>(sensorGroup, useSubgridBlocks);
 
-            // Prioritize the given cockpit name
-            rc = GetBlock<IMyShipController>(cockpitName, true);
-            if (rc == null) // Second priority cockpit
-                rc = GetBlock<IMyCockpit>();
-            if (rc == null) // Thrid priority remote control
-                rc = GetBlock<IMyRemoteControl>();
+            // Prioritize the given cockpit name	
+            rc = GetBlock<IMyShipController>(cockpitName, useSubgridBlocks);
+            if (rc == null) // Second priority cockpit	
+                rc = GetBlock<IMyCockpit>(useSubgridBlocks);
+            if (rc == null) // Thrid priority remote control	
+                rc = GetBlock<IMyRemoteControl>(useSubgridBlocks);
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
             if (activeRaycasting)
                 allCameras = new List<IMyCameraBlock>();
-            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>())
+            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>(useSubgridBlocks))
             {
                 if (EqualsPrecision(Vector3D.Dot(rc.WorldMatrix.Forward, c.WorldMatrix.Forward), 1, 0.01))
                 {
@@ -139,7 +131,7 @@ namespace IngameScript
 
             if(!isDisabled)
                 Runtime.UpdateFrequency = tickSpeed;
-            Echo("Running.");
+            Echo("Ready");
         }
 
         public void Save ()
@@ -290,7 +282,6 @@ namespace IngameScript
                             sec *= 1f / 60;
 
                         Vector3D prediction = previousHit.Position + previousHit.Velocity * sec;
-                        Me.CustomData = new MyWaypointInfo("Test", prediction).ToString();
                         foreach (IMyCameraBlock c in allCameras)
                         {
                             if (!c.EnableRaycast)

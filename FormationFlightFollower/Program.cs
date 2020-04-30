@@ -3,16 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System;
-using VRage.Game;
 using VRageMath;
 using VRage;
-using SpaceEngineers.Game.ModAPI.Ingame;
 
 namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // Follower Script Version 1.0
+        // Follower Script Version 1.1
         // ============= Settings ==============
         // The id that the ship should listen to.
         // All commands not prefixed by this will be ignored.
@@ -40,7 +38,7 @@ namespace IngameScript
         // This allows you to automatically disable the script when the cockpit is in use.
         readonly bool autoStop = true;
 
-        // When this is true, opon leaving the cockpit, the script will set the offset to the current position instead 
+        // When this is true, upon leaving the cockpit, the script will set the offset to the current position instead 
         // of returning to its designated point. Similar to the starthere command.
         // This only applies if autoStop is true.
         readonly bool autoStartHere = false;
