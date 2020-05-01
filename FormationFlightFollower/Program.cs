@@ -5,77 +5,17 @@ using System.Text;
 using System;
 using VRageMath;
 using VRage;
+using VRage.Game.ModAPI.Ingame.Utilities;
 
 namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
         // Follower Script Version 1.1
+
         // ============= Settings ==============
-        // The id that the ship should listen to.
-        // All commands not prefixed by this will be ignored.
-        // Any character is allowed except ;
-        const string followerSystemId = "System1";
-        const string followerId = "Drone1";
-        
-        // The position that the ship will take relative to the main ship by default
-        // In (X, Y, Z)
-        // X: +Right -Left
-        // Y: +Up -Down
-        // Z: +Backward -Forward
-        readonly Vector3D defaultOffset = new Vector3D(50, 0, 0);
-        
-        // If the script is causing lag try disabling collision avoidance. This is a CPU intensive process!
-        // Don't rely on this feature to save your ships! Remember, it is detecting objects between itself and the where
-        // it is supposed to be, not objects in its path. Enabling this will cause your ship to be renamed.
-        readonly bool enableCollisionAvoidence = false;
-
-        // The name of the cockpit in the ship. You may leave this blank, but it is highly recommended 
-        // to set this field to avoid unexpected behavior related to orientation.
-        // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.
-        const string cockpitName = "";
-
-        // This allows you to automatically disable the script when the cockpit is in use.
-        readonly bool autoStop = true;
-
-        // When this is true, upon leaving the cockpit, the script will set the offset to the current position instead 
-        // of returning to its designated point. Similar to the starthere command.
-        // This only applies if autoStop is true.
-        readonly bool autoStartHere = false;
-
-        // The maximum speed that the ship can go to correct itself.
-        // This is relative to the speed of the leader ship. 
-        // Example: If leader ship is going 50 m/s, the follower can go 50 m/s + maxSpeed m/s
-        const double maxSpeed = 20;
-
-        // This is the frequency that the script is running at. If you are experiencing lag
-        // because of this script try decreasing this value. Valid values:
-        // Update1 : Runs the script every tick
-        // Update10 : Runs the script every 10th tick
-        // Update100 : Runs the script every 100th tick
-        // If you get odd or unexpected behavior, try setting calculateMissingTicks to true.
-        readonly UpdateFrequency tickSpeed = UpdateFrequency.Update1;
-
-        // When the tick speed of the leader is lower than the tick speed of the follower, this workaround can can be activated.
-        // When this is enabled, the script will "guess" what the leader position should be in missing ticks. If the leader gets 
-        // damaged and stops, the follower will keep going as if the leader is still there until you use the stop command.
-        const bool calculateMissingTicks = true;
-
-        // When calculateMissingTicks is enabled, the maximum number of ticks to estimate before 
-        // assuming the leader is no longer active.
-        // 1 game tick = 1/60 seconds
-        const int maxMissingScriptTicks = 100;
-        // =====================================
-
-        // =========== Configurations ==========
-        // You can save multiple offsets for your ship using the save, savehere, and load commands. The offsets for saved configurations
-        // can be directly edited in the CustomData field of the programmable block. By default, the script will have a single 'default'
-        // configuration with the default offset saved. When you make changes to the CustomData directly, you should recompile the script to
-        // make the changes appear. CustomData will only be updated by the script when using the save and savehere commands.
-        // Warning: Any error in the CustomData will cause the entire script to reset. 
-        // Syntax:
-        // <name1> <x1> <y1> <z1>
-        // <name2> <x2> <y2> <z2>
+        // Settings are located entirely in Custom Data.
+        // Run the script once to generate an initial config.
         // =====================================
 
         // ============= Commands ==============
@@ -84,16 +24,15 @@ namespace IngameScript
         // stop : stops the script and releases control to you
         // start : starts the script after a stop command
         // starthere : starts the script in the current position
-        // reset : resets and loads the default configuration with the default offset
         // clear : forces the script to forget a previous leader when calculateMissingTicks is true
+        // reset : loads the current configuration, or the first offset
         // save(;name) : saves the configuration to the current offset
         // savehere(;name) : saves the configuration to the current position
         // load;name : loads the offset from the configuration
         // =====================================
 
-        // You can ignore any unreachable code warnings that appear in this script.
+        Settings settings;
 
-        Dictionary<string, Vector3D> configurations = new Dictionary<string, Vector3D>();
         string currentConfig = "default";
 
         IMyShipController rc;
@@ -105,11 +44,11 @@ namespace IngameScript
         Vector3D leaderVelocity;
         bool isDisabled = false;
         Random r = new Random();
-        Vector3D offset;
+        Vector3D offset = new Vector3D(50, 0, 0);
         IMyBroadcastListener leaderListener;
         IMyBroadcastListener commandListener;
-        const string transmitTag = "FSLeader" + followerSystemId;
-        const string transmitCommandTag = "FSCommand" + followerSystemId;
+        readonly string transmitTag = "FSLeader";
+        readonly string transmitCommandTag = "FSCommand";
 
         readonly int echoFrequency = 100; // every 100th game tick
         int runtime = 0;
@@ -119,8 +58,14 @@ namespace IngameScript
         
         public Program ()
         {
+            settings = new Settings(Me);
+            settings.Load();
+
+            transmitTag += settings.followerSystemId.Value;
+            transmitCommandTag += settings.followerSystemId.Value;
+
             // Prioritize the given cockpit name
-            rc = GetBlock<IMyShipController>(cockpitName, true);
+            rc = GetBlock<IMyShipController>(settings.cockpitName.Value, true);
             if (rc == null) // Second priority cockpit
                 rc = GetBlock<IMyCockpit>();
             if (rc == null) // Thrid priority remote control
@@ -128,22 +73,17 @@ namespace IngameScript
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
-            thrust = new ThrusterControl(rc, tickSpeed, GetBlocks<IMyThrust>());
-            gyros = new GyroControl(rc, tickSpeed, GetBlocks<IMyGyro>());
-
-            // Set up the default configuration for if loading storage fails.
-            configurations ["default"] = defaultOffset;
-            currentConfig = "default";
-            offset = defaultOffset;
+            thrust = new ThrusterControl(rc, settings.tickSpeed.Value, GetBlocks<IMyThrust>());
+            gyros = new GyroControl(rc, settings.tickSpeed.Value, GetBlocks<IMyGyro>());
 
             LoadStorage();
 
-            if (enableCollisionAvoidence)
+            if (settings.enableCollisionAvoidence.Value)
                 cameras = GetBlocks<IMyCameraBlock>();
 
-            if (tickSpeed == UpdateFrequency.Update10)
+            if (settings.tickSpeed.Value == UpdateFrequency.Update10)
                 echoFrequency = 10;
-            else if (tickSpeed == UpdateFrequency.Update100)
+            else if (settings.tickSpeed.Value == UpdateFrequency.Update100)
                 echoFrequency = 1;
 
             leaderListener = IGC.RegisterBroadcastListener(transmitTag);
@@ -154,15 +94,13 @@ namespace IngameScript
             Echo("Running.");
         }
 
-        
-
         void ResetMovement ()
         {
             gyros.Reset();
             thrust.Reset();
         }
 
-        public void Save ()
+        public void SaveStorage ()
         {
             // isDisabled;currentConfig;x;y;z
             StringBuilder sb = new StringBuilder();
@@ -180,60 +118,22 @@ namespace IngameScript
             Storage = sb.ToString();
         }
 
-        void SaveStorage ()
+        public void SaveAll ()
         {
-            // Save values stored in Storage
-            Save();
-
-            // Save values stored in CustomData
-            /* name1 x y z
-             * name2 x y z
-             */
-            StringBuilder sb = new StringBuilder();
-            foreach (KeyValuePair<string, Vector3D> kv in configurations)
-            {
-                sb.Append(kv.Key);
-                sb.Append(' ');
-                sb.Append(kv.Value.X);
-                sb.Append(' ');
-                sb.Append(kv.Value.Y);
-                sb.Append(' ');
-                sb.Append(kv.Value.Z);
-                sb.Append('\n');
-            }
-            Me.CustomData = sb.ToString();
+            SaveStorage();
+            settings.Save();
         }
 
         void LoadStorage ()
         {
-            if (string.IsNullOrWhiteSpace(Storage) || string.IsNullOrWhiteSpace(Me.CustomData))
+            if (string.IsNullOrWhiteSpace(Storage))// || string.IsNullOrWhiteSpace(Me.CustomData))
             {
                 SaveStorage();
-                Runtime.UpdateFrequency = tickSpeed;
+                Runtime.UpdateFrequency = settings.tickSpeed.Value;
             }
 
             try
             {
-                // Parse CustomData values
-                Dictionary<string, Vector3D> loadedConfig = new Dictionary<string, Vector3D>
-                {
-                    ["default"] = defaultOffset // Ensure that default offset always exists
-                };
-                string [] config = Me.CustomData.Split('\n');
-                foreach (string s in config)
-                {
-                    if (string.IsNullOrWhiteSpace(s))
-                        continue; // Ignore blank lines
-                    
-                    string [] configValues = s.Split(' ');
-                    Vector3D value = new Vector3D(
-                        double.Parse(configValues [1]),
-                        double.Parse(configValues [2]),
-                        double.Parse(configValues [3])
-                        );
-                    loadedConfig [configValues [0]] = value;
-                }
-
                 // Parse Storage values
                 string [] args = Storage.Split(';');
                 bool loadedIsDisabled = args [0] == "1";
@@ -244,21 +144,19 @@ namespace IngameScript
                     double.Parse(args [4])
                     );
 
-                // Parse succesful, update the real values.
-                configurations = loadedConfig;
-                currentConfig = loadedCurrentConfig;
-                if (configurations.ContainsKey(currentConfig))
-                    currentConfig = "default"; // If something went wrong, use the only guaranteed configuration.
+                if (settings.configs.Value.ContainsKey(loadedCurrentConfig))
+                    currentConfig = loadedCurrentConfig;
+                else
+                    currentConfig = settings.configs.Value.First().Key;
                 offset = loadedOffset;
                 isDisabled = loadedIsDisabled;
                 if (!isDisabled)
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
             } 
             catch (Exception)
             {
                 SaveStorage();
-                Runtime.UpdateFrequency = tickSpeed;
-                //throw;
+                Runtime.UpdateFrequency = settings.tickSpeed.Value;
             }
         }
 
@@ -276,14 +174,14 @@ namespace IngameScript
                     return;
                 }
 
-                if (autoStop)
+                if (settings.autoStop.Value)
                 {
                     bool control = rc.IsUnderControl;
                     if (control != prevControl)
                     {
                         if (control)
                             ResetMovement();
-                        else if (autoStartHere)
+                        else if (settings.autoStartHere.Value)
                             offset = CurrentOffset();
 
                         prevControl = control;
@@ -338,7 +236,7 @@ namespace IngameScript
                         {
                             foreach (string s in msg.Item1.Split(';'))
                             {
-                                if (s == followerId)
+                                if (s == settings.followerId.Value)
                                 {
                                     RemoteCommand(msg.Item2);
                                     return;
@@ -362,8 +260,8 @@ namespace IngameScript
 
         void WriteEcho ()
         {
-            Echo("Running.\nConfigs:");
-            foreach (string s in configurations.Keys)
+            Echo("Running.\n"+settings.followerSystemId+"."+settings.followerId+"\nConfigs:");
+            foreach (string s in settings.configs.Value.Keys)
             {
                 if (s == currentConfig)
                     Echo(s + '*');
@@ -373,9 +271,9 @@ namespace IngameScript
             Echo(offset.ToString("0.00"));
             if(leaderMatrix == MatrixD.Zero)
                 Echo("No messages received.");
-            else if (calculateMissingTicks && runtime - updated > maxMissingScriptTicks)
+            else if (settings.calculateMissingTicks.Value && runtime - updated > settings.maxMissingScriptTicks.Value)
                 Echo($"Weak signal, message receved {runtime - updated} ticks ago.");
-            if (autoStop && prevControl)
+            if (settings.autoStop.Value && prevControl)
                 Echo("Cockpit is under control.");
             if (obstacleOffset.HasValue)
                 Echo("Obstacle Detected! Stopping the ship.");
@@ -390,32 +288,32 @@ namespace IngameScript
             // Apply translations to find the world position that this follower is supposed to be
             Vector3D targetPosition = Vector3D.Transform(offset, leaderMatrix);
 
-            if (calculateMissingTicks)
+            if (settings.calculateMissingTicks.Value)
             {
-                int diff = Math.Min(Math.Abs(runtime - updated), maxMissingScriptTicks);
+                int diff = Math.Min(Math.Abs(runtime - updated), settings.maxMissingScriptTicks.Value);
                 if (diff > 0)
                 {
                     double secPerTick = 1.0 / 60;
-                    if (tickSpeed == UpdateFrequency.Update10)
+                    if (settings.tickSpeed.Value == UpdateFrequency.Update10)
                         secPerTick = 1.0 / 6;
-                    else if (tickSpeed == UpdateFrequency.Update100)
+                    else if (settings.tickSpeed.Value == UpdateFrequency.Update100)
                         secPerTick = 5.0 / 3;
                     double secPassed = diff * secPerTick;
                     targetPosition += leaderVelocity * secPassed;
                 }
             }
 
-            if (enableCollisionAvoidence)
+            if (settings.enableCollisionAvoidence.Value)
             {
                 CheckForCollistions(targetPosition);
                 if (obstacleOffset.HasValue)
                 {
-                    thrust.ApplyAccel(thrust.ControlPosition(Vector3D.Transform(obstacleOffset.Value, leaderMatrix), leaderVelocity, maxSpeed));
+                    thrust.ApplyAccel(thrust.ControlPosition(Vector3D.Transform(obstacleOffset.Value, leaderMatrix), leaderVelocity, settings.maxSpeed.Value));
                     return;
                 }
             }
 
-            thrust.ApplyAccel(thrust.ControlPosition(targetPosition, leaderVelocity, maxSpeed));
+            thrust.ApplyAccel(thrust.ControlPosition(targetPosition, leaderVelocity, settings.maxSpeed.Value));
         }
         
         void RemoteCommand (string command)
@@ -466,22 +364,25 @@ namespace IngameScript
                     Echo("Stopped.");
                     break;
                 case "start": // start
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
                     isDisabled = false;
                     WriteEcho();
                     break;
                 case "starthere": // starthere
-                    Runtime.UpdateFrequency = tickSpeed;
+                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
                     offset = CurrentOffset();
                     isDisabled = false;
                     WriteEcho();
                     break;
                 case "reset": // reset
-                    offset = defaultOffset;
-                    configurations ["default"] = defaultOffset;
-                    currentConfig = "default";
-                    SaveStorage();
-                    WriteEcho();
+                    {
+                        Vector3D newOffset;
+                        if (!settings.configs.Value.TryGetValue(currentConfig, out newOffset))
+                            newOffset = settings.configs.Value.First().Value;
+                        offset = newOffset;
+                        SaveStorage();
+                        WriteEcho();
+                    }
                     break;
                 case "save": // save(;name)
                     {
@@ -492,8 +393,8 @@ namespace IngameScript
                         if (key.Contains(' '))
                             return;
 
-                        configurations [key] = offset;
-                        SaveStorage();
+                        settings.configs.Value [key] = offset;
+                        SaveAll();
                     }
                     break;
                 case "savehere": // save(;name)
@@ -506,18 +407,21 @@ namespace IngameScript
                             return;
 
                         Vector3D newOffset = CurrentOffset();
-                        configurations [key] = newOffset;
-                        SaveStorage();
+                        settings.configs.Value [key] = newOffset;
+                        SaveAll();
                     }
                     break;
                 case "load": // load;name
-                    if (args.Length == 1 || !configurations.ContainsKey(args [1]))
-                        return;
-                    // Load the new config
-                    offset = configurations [args [1]];
-                    currentConfig = args [1];
-                    isDisabled = false;
-                    WriteEcho();
+                    {
+                        Vector3D newOffset;
+                        if (args.Length == 1 || !settings.configs.Value.TryGetValue(args[1], out newOffset))
+                            return;
+                        // Load the new config
+                        offset = newOffset;
+                        currentConfig = args [1];
+                        isDisabled = false;
+                        WriteEcho();
+                    }
                     break;
                 case "clear":
                     leaderMatrix = MatrixD.Zero;
@@ -592,7 +496,5 @@ namespace IngameScript
             }
             return raycasted;
         }
-
-
     }
 }
