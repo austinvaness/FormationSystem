@@ -91,7 +91,7 @@ namespace IngameScript
             commandListener = IGC.RegisterBroadcastListener(transmitCommandTag);
             commandListener.SetMessageCallback("");
 
-            Echo("Running.");
+            Echo("Ready.");
         }
 
         void ResetMovement ()

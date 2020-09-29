@@ -8,7 +8,7 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // Leader Script Version 1.1
+        // Leader Script Version 1.0
         // ============= Settings ==============
         // The id of the system that the followers are listening on.
         // Any character is allowed except ;
@@ -33,9 +33,6 @@ namespace IngameScript
         // to set this field to avoid unexpected behavior related to orientation.	
         // If this cockpit is not found, the script will attempt to find a suitable cockpit on its own.	
         const string cockpitName = "";
-
-        // When true, the script will be able to see blocks that are connected via rotor, connector, etc.
-        const bool useSubgridBlocks = false;
 
         // When true, the script will attempt to reconnect to the previous leader on start.
         // This functions in a similar way to the find command if an exact match is not found.
@@ -75,10 +72,9 @@ namespace IngameScript
 
         // You can ignore any unreachable code warnings that appear in this script.
 
+        IMyShipController rc;
         const string transmitTag = "FSLeader" + followerSystem;
         const string transmitCommandTag = "FSCommand" + followerSystem;
-
-        IMyShipController rc;
         List<IMySensorBlock> sensors = new List<IMySensorBlock>();
         List<IMyCameraBlock> forwardCameras = new List<IMyCameraBlock>();
         long target = 0;
@@ -96,29 +92,29 @@ namespace IngameScript
         public Program ()
         {
             if (string.IsNullOrWhiteSpace(sensorGroup))
-                sensors = GetBlocks<IMySensorBlock>(useSubgridBlocks);
+                sensors = GetBlocks<IMySensorBlock>();
             else
-                sensors = GetBlocks<IMySensorBlock>(sensorGroup, useSubgridBlocks);
+                sensors = GetBlocks<IMySensorBlock>(sensorGroup, true);
 
-            // Prioritize the given cockpit name	
-            rc = GetBlock<IMyShipController>(cockpitName, useSubgridBlocks);
-            if (rc == null) // Second priority cockpit	
-                rc = GetBlock<IMyCockpit>(useSubgridBlocks);
-            if (rc == null) // Thrid priority remote control	
-                rc = GetBlock<IMyRemoteControl>(useSubgridBlocks);
+            // Prioritize the given cockpit name
+            rc = GetBlock<IMyShipController>(cockpitName, true);
+            if (rc == null) // Second priority cockpit
+                rc = GetBlock<IMyCockpit>();
+            if (rc == null) // Thrid priority remote control
+                rc = GetBlock<IMyRemoteControl>();
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
             if (activeRaycasting)
                 allCameras = new List<IMyCameraBlock>();
-            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>(useSubgridBlocks))
+            foreach (IMyCameraBlock c in GetBlocks<IMyCameraBlock>())
             {
                 if (EqualsPrecision(Vector3D.Dot(rc.WorldMatrix.Forward, c.WorldMatrix.Forward), 1, 0.01))
                 {
                     forwardCameras.Add(c);
                     c.EnableRaycast = true;
                 }
-                if(activeRaycasting)
+                if (activeRaycasting)
                     allCameras.Add(c);
             }
 
@@ -129,7 +125,7 @@ namespace IngameScript
             else if (tickSpeed == UpdateFrequency.Update100)
                 echoFrequency = 1;
 
-            if(!isDisabled)
+            if (!isDisabled)
                 Runtime.UpdateFrequency = tickSpeed;
             Echo("Ready");
         }
