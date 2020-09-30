@@ -134,7 +134,7 @@ namespace IngameScript
                 calculateMissingTicks.Save(ini);
                 maxMissingScriptTicks.Save(ini);
                 ini.SetSectionComment(section,
-                    " Formation System - Follower Script Version 1.1" +
+                    " Formation System - Follower Script Version 1.2" +
                     "\n If you edit this configuration manually, you must recompile the" +
                     "\n script afterwards or you could lose the changes.");
                 Me.CustomData = ini.ToString();

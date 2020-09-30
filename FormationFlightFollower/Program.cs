@@ -11,7 +11,7 @@ namespace IngameScript
 {
     partial class Program : MyGridProgram
     {
-        // Follower Script Version 1.1
+        // Follower Script Version 1.2
 
         // ============= Settings ==============
         // Settings are located entirely in Custom Data.
@@ -31,9 +31,8 @@ namespace IngameScript
         // load;name : loads the offset from the configuration
         // =====================================
 
+        StorageData storage;
         Settings settings;
-
-        string currentConfig = "default";
 
         IMyShipController rc;
         ThrusterControl thrust;
@@ -42,9 +41,7 @@ namespace IngameScript
         Vector3D? obstacleOffset = null;
         MatrixD leaderMatrix = MatrixD.Zero;
         Vector3D leaderVelocity;
-        bool isDisabled = false;
         Random r = new Random();
-        Vector3D offset = new Vector3D(50, 0, 0);
         IMyBroadcastListener leaderListener;
         IMyBroadcastListener commandListener;
         readonly string transmitTag = "FSLeader";
@@ -61,6 +58,9 @@ namespace IngameScript
             settings = new Settings(Me);
             settings.Load();
 
+            storage = new StorageData(this);
+            storage.Load();
+
             transmitTag += settings.followerSystemId.Value;
             transmitCommandTag += settings.followerSystemId.Value;
 
@@ -68,15 +68,13 @@ namespace IngameScript
             rc = GetBlock<IMyShipController>(settings.cockpitName.Value, true);
             if (rc == null) // Second priority cockpit
                 rc = GetBlock<IMyCockpit>();
-            if (rc == null) // Thrid priority remote control
+            if (rc == null) // Third priority remote control
                 rc = GetBlock<IMyRemoteControl>();
             if (rc == null) // No cockpits found.
                 throw new Exception("No cockpit/remote control found. Set the cockpitName field in settings.");
 
             thrust = new ThrusterControl(rc, settings.tickSpeed.Value, GetBlocks<IMyThrust>());
             gyros = new GyroControl(rc, settings.tickSpeed.Value, GetBlocks<IMyGyro>());
-
-            LoadStorage();
 
             if (settings.enableCollisionAvoidence.Value)
                 cameras = GetBlocks<IMyCameraBlock>();
@@ -92,72 +90,14 @@ namespace IngameScript
             commandListener.SetMessageCallback("");
 
             Echo("Ready.");
+            if (!storage.IsDisabled)
+                Runtime.UpdateFrequency = settings.tickSpeed.Value;
         }
 
-        void ResetMovement ()
+        void ResetMovement()
         {
             gyros.Reset();
             thrust.Reset();
-        }
-
-        public void SaveStorage ()
-        {
-            // isDisabled;currentConfig;x;y;z
-            StringBuilder sb = new StringBuilder();
-            if (isDisabled)
-                sb.Append("1;");
-            else
-                sb.Append("0;");
-            sb.Append(currentConfig);
-            sb.Append(';');
-            sb.Append(offset.X);
-            sb.Append(';');
-            sb.Append(offset.Y);
-            sb.Append(';');
-            sb.Append(offset.Z);
-            Storage = sb.ToString();
-        }
-
-        public void SaveAll ()
-        {
-            SaveStorage();
-            settings.Save();
-        }
-
-        void LoadStorage ()
-        {
-            if (string.IsNullOrWhiteSpace(Storage))// || string.IsNullOrWhiteSpace(Me.CustomData))
-            {
-                SaveStorage();
-                Runtime.UpdateFrequency = settings.tickSpeed.Value;
-            }
-
-            try
-            {
-                // Parse Storage values
-                string [] args = Storage.Split(';');
-                bool loadedIsDisabled = args [0] == "1";
-                string loadedCurrentConfig = args [1];
-                Vector3D loadedOffset = new Vector3D(
-                    double.Parse(args [2]),
-                    double.Parse(args [3]),
-                    double.Parse(args [4])
-                    );
-
-                if (settings.configs.Value.ContainsKey(loadedCurrentConfig))
-                    currentConfig = loadedCurrentConfig;
-                else
-                    currentConfig = settings.configs.Value.First().Key;
-                offset = loadedOffset;
-                isDisabled = loadedIsDisabled;
-                if (!isDisabled)
-                    Runtime.UpdateFrequency = settings.tickSpeed.Value;
-            } 
-            catch (Exception)
-            {
-                SaveStorage();
-                Runtime.UpdateFrequency = settings.tickSpeed.Value;
-            }
         }
 
         public void Main (string argument, UpdateType updateSource)
@@ -182,7 +122,7 @@ namespace IngameScript
                         if (control)
                             ResetMovement();
                         else if (settings.autoStartHere.Value)
-                            offset = CurrentOffset();
+                            storage.Offset = CurrentOffset();
 
                         prevControl = control;
                     }
@@ -258,32 +198,50 @@ namespace IngameScript
             }
         }
 
-        void WriteEcho ()
+        void WriteEcho()
         {
-            Echo("Running.\n"+settings.followerSystemId+"."+settings.followerId+"\nConfigs:");
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("Running.");
+            sb.Append(settings.followerSystemId).Append('.').Append(settings.followerId).AppendLine();
+            Vector3D offset = storage.Offset;
+            sb.AppendLine(offset.ToString("0.00"));
+            if (offset == Vector3D.Zero)
+            {
+                sb.AppendLine("Offset is zero,");
+                sb.AppendLine("Use commands to give the offset a value.");
+            }
+            if (leaderMatrix == MatrixD.Zero)
+                sb.AppendLine("No messages received.");
+            else if (settings.calculateMissingTicks.Value && runtime - updated > settings.maxMissingScriptTicks.Value)
+                sb.AppendLine($"Weak signal, message received {runtime - updated} ticks ago.");
+            if (settings.autoStop.Value && prevControl)
+                sb.AppendLine("Cockpit is under control.");
+            if (obstacleOffset.HasValue)
+                sb.AppendLine("Obstacle Detected! Stopping the ship.");
+            sb.AppendLine();
+            sb.AppendLine("Configs:");
             foreach (string s in settings.configs.Value.Keys)
             {
-                if (s == currentConfig)
-                    Echo(s + '*');
-                else
-                    Echo(s);
+                sb.Append(' ').Append(s);
+                if (s == storage.CurrentConfig)
+                    sb.Append('*');
+                sb.AppendLine();
             }
-            Echo(offset.ToString("0.00"));
-            if(leaderMatrix == MatrixD.Zero)
-                Echo("No messages received.");
-            else if (settings.calculateMissingTicks.Value && runtime - updated > settings.maxMissingScriptTicks.Value)
-                Echo($"Weak signal, message receved {runtime - updated} ticks ago.");
-            if (settings.autoStop.Value && prevControl)
-                Echo("Cockpit is under control.");
-            if (obstacleOffset.HasValue)
-                Echo("Obstacle Detected! Stopping the ship.");
 
+            Echo(sb.ToString());
         }
 
 
         void Move ()
         {
             gyros.FaceVectors(leaderMatrix.Forward, leaderMatrix.Up);
+
+            Vector3D offset = storage.Offset;
+            if (offset == Vector3D.Zero)
+            {
+                thrust.ApplyAccel(thrust.ControlVelocity(leaderVelocity));
+                return;
+            }
 
             // Apply translations to find the world position that this follower is supposed to be
             Vector3D targetPosition = Vector3D.Transform(offset, leaderMatrix);
@@ -325,17 +283,16 @@ namespace IngameScript
                 case "setoffset": // setoffset;x;y;z
                     if (args.Length == 4)
                     {
-                        if (args [1] == "")
-                            args [1] = this.offset.X.ToString();
-                        if (args [2] == "")
-                            args [2] = this.offset.Y.ToString();
-                        if (args [3] == "")
-                            args [3] = this.offset.Z.ToString();
+                        Vector3D offset = storage.Offset;
+                        double temp;
+                        if (!string.IsNullOrWhiteSpace(args[1]) && double.TryParse(args[1], out temp))
+                            offset.X = temp;
+                        if (!string.IsNullOrWhiteSpace(args[2]) && double.TryParse(args[2], out temp))
+                            offset.Y = temp;
+                        if (!string.IsNullOrWhiteSpace(args[3]) && double.TryParse(args[3], out temp))
+                            offset.Z = temp;
 
-                        Vector3D offset;
-                        if (!StringToVector(args [1], args [2], args [3], out offset))
-                            return;
-                        this.offset = offset;
+                        storage.Offset = offset;
                         WriteEcho();
                     }
                     else
@@ -346,10 +303,16 @@ namespace IngameScript
                 case "addoffset": // addoffset;x;y;z
                     if (args.Length == 4)
                     {
-                        Vector3D offset;
-                        if (!StringToVector(args [1], args [2], args [3], out offset))
-                            return;
-                        this.offset += offset;
+                        Vector3D offset = new Vector3D();
+                        double temp;
+                        if (!string.IsNullOrWhiteSpace(args[1]) && double.TryParse(args[1], out temp))
+                            offset.X = temp;
+                        if (!string.IsNullOrWhiteSpace(args[2]) && double.TryParse(args[2], out temp))
+                            offset.Y = temp;
+                        if (!string.IsNullOrWhiteSpace(args[3]) && double.TryParse(args[3], out temp))
+                            offset.Z = temp;
+
+                        storage.Offset += offset;
                         WriteEcho();
                     }
                     else
@@ -360,46 +323,47 @@ namespace IngameScript
                 case "stop": // stop
                     Runtime.UpdateFrequency = UpdateFrequency.None;
                     ResetMovement();
-                    isDisabled = true;
+                    storage.IsDisabled = true;
                     Echo("Stopped.");
                     break;
                 case "start": // start
                     Runtime.UpdateFrequency = settings.tickSpeed.Value;
-                    isDisabled = false;
+                    storage.IsDisabled = false;
                     WriteEcho();
                     break;
                 case "starthere": // starthere
                     Runtime.UpdateFrequency = settings.tickSpeed.Value;
-                    offset = CurrentOffset();
-                    isDisabled = false;
+                    storage.AutoSave = false;
+                    storage.Offset = CurrentOffset();
+                    storage.IsDisabled = false;
+                    storage.Save();
                     WriteEcho();
                     break;
                 case "reset": // reset
                     {
                         Vector3D newOffset;
-                        if (!settings.configs.Value.TryGetValue(currentConfig, out newOffset))
+                        if (!settings.configs.Value.TryGetValue(storage.CurrentConfig, out newOffset))
                             newOffset = settings.configs.Value.First().Value;
-                        offset = newOffset;
-                        SaveStorage();
+                        storage.Offset = newOffset;
                         WriteEcho();
                     }
                     break;
                 case "save": // save(;name)
                     {
-                        string key = currentConfig;
+                        string key = storage.CurrentConfig;
                         if (args.Length > 1)
                             key = args [1];
 
                         if (key.Contains(' '))
                             return;
 
-                        settings.configs.Value [key] = offset;
-                        SaveAll();
+                        settings.configs.Value [key] = storage.Offset;
+                        settings.Save();
                     }
                     break;
                 case "savehere": // save(;name)
                     {
-                        string key = currentConfig;
+                        string key = storage.CurrentConfig;
                         if (args.Length > 1)
                             key = args [1];
 
@@ -408,7 +372,7 @@ namespace IngameScript
 
                         Vector3D newOffset = CurrentOffset();
                         settings.configs.Value [key] = newOffset;
-                        SaveAll();
+                        settings.Save();
                     }
                     break;
                 case "load": // load;name
@@ -417,9 +381,11 @@ namespace IngameScript
                         if (args.Length == 1 || !settings.configs.Value.TryGetValue(args[1], out newOffset))
                             return;
                         // Load the new config
-                        offset = newOffset;
-                        currentConfig = args [1];
-                        isDisabled = false;
+                        storage.AutoSave = false;
+                        storage.Offset = newOffset;
+                        storage.CurrentConfig = args [1];
+                        storage.IsDisabled = false;
+                        storage.Save();
                         WriteEcho();
                     }
                     break;
