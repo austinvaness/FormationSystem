@@ -33,7 +33,6 @@ Global
 		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{8b17a575-b3c3-46c5-9884-03f38585271b}*SharedItemsImports = 4
 		..\Mixins\GyroControl\GyroControl\GyroControl.projitems*{9e7a19f7-673a-48f8-ace6-07bcb0cfbb8d}*SharedItemsImports = 13
 		IniConfig\IniConfig.projitems*{bec2d769-d1df-4439-836a-459375f5e5ed}*SharedItemsImports = 13
-		FollowerShared\FollowerShared.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\BlockFinder\BlockFinder\BlockFinder.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\PID\PID\PID.projitems*{cf55398b-ad90-49a8-90e9-8b3db1e0175b}*SharedItemsImports = 4
 		..\Mixins\ThrustControl2\ThrustControl2\ThrustControl2.projitems*{e8993be6-cf86-4449-bbdd-10f694d59cad}*SharedItemsImports = 13
