@@ -130,24 +130,36 @@ namespace IngameScript
                 {
                     case "Suspension1x1mirrored":
                     case "Suspension1x1":
+                    case "OffroadSuspension1x1":
+                    case "OffroadSuspension1x1mirrored":
                         return 20000;
                     case "Suspension3x3mirrored":
                     case "Suspension3x3":
+                    case "OffroadSuspension3x3":
+                    case "OffroadSuspension3x3mirrored":
                         return 60000;
                     case "Suspension5x5mirrored":
                     case "Suspension5x5":
+                    case "OffroadSuspension5x5":
+                    case "OffroadSuspension5x5mirrored":
                         return 100000;
                     case "SmallSuspension1x1mirrored":
                     case "SmallSuspension1x1":
+                    case "OffroadSmallSuspension1x1":
+                    case "OffroadSmallSuspension1x1mirrored":
                         return 120;
                     case "SmallSuspension3x3mirrored":
                     case "SmallSuspension3x3":
+                    case "OffroadSmallSuspension3x3":
+                    case "OffroadSmallSuspension3x3mirrored":
                         return 1920;
                     case "SmallSuspension5x5mirrored":
                     case "SmallSuspension5x5":
+                    case "OffroadSmallSuspension5x5":
+                    case "OffroadSmallSuspension5x5mirrored":
                         return 4800;
                 }
-                throw new Exception("Unknown wheel type.");
+                throw new Exception("Unknown wheel type: " + wheel.BlockDefinition.SubtypeId.ToString());
             }
 
             public void Reset ()
